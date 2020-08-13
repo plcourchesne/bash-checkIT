@@ -1,0 +1,48 @@
+
+
+if [ -f ~/.bashrc.checkIT.lib.v1 ]; then
+    . ~/.bashrc.checkIT.lib.v1
+
+    alias checkSlack='bash --posix -i -c "_checkSlack" ; resumeSlack'
+
+    _checkSlack(){
+        checkProcess 'Slack' 'slack' 'with pause surge delays of' 5 30
+    }
+    export -f _checkSlack
+
+    resumeSlack(){
+        resumeProcessByName 'slack'
+    }
+    export -f resumeSlack
+
+
+
+
+    alias checkChrome='bash --posix -i -c "_checkChrome" ; resumeChrome'
+
+    _checkChrome(){
+        checkProcess 'chrome' 'chrome'
+    }
+    export -f _checkChrome
+
+    resumeChrome(){
+        resumeProcessByName 'chrome'
+    }
+    export -f resumeChrome
+
+
+
+
+    alias checkFirefox='bash --posix -i -c "_checkFirefox" ; resumeFirefox'
+
+    _checkFirefox(){
+        checkProcess 'Firefox' 'firefox' 'unless' '(Bandcamp|YouTube)' 'with pause surge delays of' 7 0
+    }
+    export -f _checkFirefox
+
+    resumeFirefox(){
+        resumeProcessByName 'firefox'
+    }
+    export -f resumeFirefox
+
+fi

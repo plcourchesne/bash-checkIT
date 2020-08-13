@@ -1,0 +1,129 @@
+
+# X utils
+
+getForgroundWindowId(){
+    xdotool getwindowfocus
+}
+export -f getForgroundWindowId
+
+getWidProperties(){
+    xprop -id $1 | grep " = "
+}
+export -f getWidProperties
+
+doesWidPropertyContain(){
+    getWidProperties $1 | grep $2 | grep $3 -q
+}
+export -f doesWidPropertyContain
+
+isWidClassOf(){
+    doesWidPropertyContain $1 'WM_CLASS' $2
+}
+export -f isWidClassOf
+
+getWidName(){
+    getWidProperties $1 | grep 'WM_NAME'
+}
+export -f getWidName
+
+doesWidNameMatch(){
+    getWidName $1 | grep -E $2 -q
+}
+export -f doesWidNameMatch
+
+
+# Process utils
+
+getPidsByName(){
+    pidof $1
+}
+export -f getPidsByName
+
+resumePids(){
+    kill -CONT $@ 2>/dev/null
+}
+export -f resumePids
+
+pausePids(){
+    kill -STOP $@ 2>/dev/null
+}
+export -f pausePids
+
+resumeProcessByName(){
+    resumePids `getPidsByName $1`
+}
+export -f resumeProcessByName
+
+pauseProcessByName(){
+    pausePids `getPidsByName $1`
+}
+export -f pauseProcessByName
+
+
+checkProcess(){
+    local pauseDelayCounter=0;
+    local pauseDelay=0;
+
+    local surgeDelayCounter=0;
+    local surgeDelay=0;
+
+    local pids;
+    local resumed=false;
+    local previousResumed;
+    local windowId;
+    local forgroundWindowId;
+
+    if [ "$5" == 'with pause surge delays of' ] ; then
+        pauseDelay=$6; 
+        surgeDelay=$7;
+    elif [ "$3" == 'with pause surge delays of' ] ; then
+        pauseDelay=$4;
+        surgeDelay=$5;
+    fi
+
+
+    while true;
+    do
+      sleep 1;
+      previousResumed=$resumed;
+      forgroundWindowId=`getForgroundWindowId`;
+
+      if isWidClassOf $forgroundWindowId $1 ; then
+          if !($resumed) ; then
+              windowId="$forgroundWindowId";
+              pids=`getPidsByName $2`
+              echo "resuming pids $pids";
+              resumePids $pids;
+              resumed=true;
+          fi
+
+      elif [ -n "$windowId" ] ; then
+          if $resumed ; then
+              if [ "$3" != 'unless' ] || !(doesWidNameMatch $windowId $4) ; then
+                  [ $pauseDelayCounter -lt $pauseDelay ] && (( pauseDelayCounter+=1 )) && continue;
+                  echo "pausing pids $pids";
+                  pausePids $pids;
+                  resumed=false;
+             fi
+
+          elif [ $surgeDelay -gt 0 ] ; then
+              [ $surgeDelayCounter -lt $surgeDelay ] && (( surgeDelayCounter+=1 )) && continue;
+              pids=`getPidsByName $2`;
+              if [ -n "$pids" ] ; then
+                  echo "resurging pids $pids";
+                  resumePids $pids;
+                  resumed=true;
+              fi
+          fi
+      fi
+
+      if [ "$resumed" != "$previousResumed" ] ; then
+          pauseDelayCounter=0;
+          surgeDelayCounter=0;
+      fi
+
+    done;
+}
+export -f checkProcess
+
+
